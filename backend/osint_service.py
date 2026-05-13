@@ -10,7 +10,8 @@ import whois
 from typing import Optional
 from app.models.schemas import OSINTResponse
 
-VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
+# เปลี่ยนบรรทัดนี้
+VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "cc372db928245661e7a83f75ae957447bfb1469264795cb5c9bb4a98f1a3bf28")
 VT_BASE_URL = "https://www.virustotal.com/api/v3"
 
 
