@@ -1,140 +1,144 @@
-import { useState } from "react";
-import { api } from "../services/api";
-import RiskBadge from "./RiskBadge";
+import React, { useState } from 'react';
 
-const SAMPLE_SMS = [
-  "แจ้งเตือนด่วน: บัญชีของท่านถูกระงับ กรุณายืนยันตัวตนภายใน 24 ชั่วโมง คลิก http://kbank-verify.xyz/confirm",
-  "ยินดีด้วยคุณได้รับรางวัลจากกรมสรรพากร 50,000 บาท กดรับรางวัล http://rd-reward.top",
+export default function SmsAnalysis() {
+  const [smsText, setSmsText] = useState('');
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // ตัวอย่างข้อความจำลอง (คลิกเพื่อเติมข้อความอัตโนมัติได้)
+  const SAMPLE_SMS = [
+  // LOW (score 0.0) - ไม่มีคำในกลุ่ม SCAM_KEYWORDS เลย
   "ธนาคารกสิกรไทย: ยอดใช้จ่ายบัตรเครดิตของท่านเมื่อวานนี้ 2,500.00 บาท",
+  // MEDIUM (score 0.3) - เข้าเงื่อนไขกลุ่ม "impersonation" เพียงอย่างเดียว
+  "กรมสรรพากรแจ้งเตือนเรื่องภาษีเงินได้ประจำปีของท่าน กรุณาตรวจสอบรายละเอียดในระบบภายในเดือนนี้",
+  // HIGH (score 0.65) - เข้ากลุ่ม "urgent" + "link" + มี URL แนบ
+  "แจ้งเตือนด่วน: บัญชีของท่านถูกระงับ กรุณายืนยันตัวตนภายใน 24 ชั่วโมง คลิก http://kbank-verify.xyz/confirm",
+  // CRITICAL (score 0.9) - เข้ากลุ่ม "urgent" + "impersonation" + "threat" + มีเบอร์โทรฝังในข้อความ
+  "เรียน ท่านมีหมายจับจากศาล กรุณาติดต่อกลับด่วนที่ 0891234567 มิฉะนั้นจะถูกดำเนินคดีและบัญชีถูกอายัดทันที",
 ];
 
-export default function SMSAnalyzer() {
-  const [text, setText] = useState("");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // ฟังก์ชันยิง API ไปหา Backend ที่เรารันไว้
+  const handleAnalyze = async () => {
+    if (!smsText.trim()) return;
 
-  async function handleAnalyze() {
-    if (!text.trim()) return;
     setLoading(true);
-    setError("");
-    setResult(null);
+    setAnalysisResult(null);
+
     try {
-      const data = await api.analyzeSMS(text);
-      setResult(data);
-    } catch (e) {
-      setError(e.message);
+      const response = await fetch('http://localhost:8000/api/v1/check/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: smsText }),
+      });
+      const data = await response.json();
+      setAnalysisResult(data);
+    } catch (error) {
+      console.error('Connection error:', error);
+      alert('ไม่สามารถเชื่อมต่อกับ Backend ได้ กรุณาตรวจสอบว่ารัน uvicorn แล้วหรือยัง');
     } finally {
       setLoading(false);
     }
-  }
+  };
+
+  // กำหนดสีตาม 3 ระดับความเสี่ยง
+  const getStatusColor = (level) => {
+    if (level === 2) return '#ef4444'; // สีแดง (หลอกลวง)
+    if (level === 1) return '#f59e0b'; // สีส้ม/เหลือง (น่าสงสัย)
+    return '#22c55e'; // สีเขียว (ปลอดภัย)
+  };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold mb-1">📩 วิเคราะห์ข้อความ SMS หลอกลวง</h2>
-        <p className="text-gray-400 text-sm">
-          วางข้อความ SMS ที่ต้องการตรวจสอบ ระบบจะวิเคราะห์ด้วย NLP ภาษาไทย
+    <div style={{ padding: '20px', color: '#fff' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ margin: '0 0 5px 0' }}>📬 วิเคราะห์ข้อความ SMS หลอกลวง</h2>
+        <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
+          วางข้อความ SMS ที่ต้องการตรวจสอบ ระบบจะวิเคราะห์ด้วย Machine Learning ภาษาไทย
         </p>
       </div>
 
-      {/* Sample buttons */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-xs text-gray-500 self-center">ตัวอย่าง:</span>
-        {SAMPLE_SMS.map((s, i) => (
+      {/* ปุ่มเลือกข้อความตัวอย่าง */}
+      <div style={{ marginBottom: '15px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <span style={{ fontSize: '13px', color: '#94a3b8' }}>คำถาม:</span>
+        {samples.map((sample, idx) => (
           <button
-            key={i}
-            onClick={() => setText(s)}
-            className="text-xs px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full border border-gray-700 transition"
+            key={idx}
+            onClick={() => setSmsText(sample)}
+            style={{
+              background: '#1e293b',
+              border: '1px solid #475569',
+              color: '#cbd5e1',
+              padding: '5px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
           >
-            ตัวอย่าง {i + 1}
+            ตัวอย่าง {idx + 1}
           </button>
         ))}
       </div>
 
-      {/* Input */}
-      <div className="space-y-3">
+      {/* ช่องกรอกข้อความ (รองรับข้อความยาวๆ เหมือนคำร้องทุกข์จริง) */}
+      <div style={{ marginBottom: '15px' }}>
         <textarea
-          rows={5}
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder="วางข้อความ SMS ที่ต้องการวิเคราะห์..."
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
+          rows="5"
+          value={smsText}
+          onChange={(e) => setSmsText(e.target.value)}
+          placeholder="วางข้อความ SMS ที่ต้องการตรวจสอบ..."
+          style={{
+            width: '100%',
+            background: '#1e293b',
+            color: '#fff',
+            padding: '12px',
+            borderRadius: '8px',
+            border: '1px solid #475569',
+            fontSize: '14px',
+            resize: 'vertical'
+          }}
         />
-        <button
-          onClick={handleAnalyze}
-          disabled={loading || !text.trim()}
-          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-lg transition text-sm"
-        >
-          {loading ? "กำลังวิเคราะห์..." : "🔍 วิเคราะห์"}
-        </button>
       </div>
 
-      {error && (
-        <div className="p-4 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">
-          ❌ {error}
-        </div>
-      )}
+      {/* ปุ่มวิเคราะห์ */}
+      <button
+        onClick={handleAnalyze}
+        disabled={loading}
+        style={{
+          padding: '10px 24px',
+          background: '#3b82f6',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontWeight: 'bold',
+          fontSize: '14px'
+        }}
+      >
+        {loading ? 'กำลังวิเคราะห์...' : '🔍 วิเคราะห์'}
+      </button>
 
-      {/* Result */}
-      {result && (
-        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
-            <span className="font-semibold">ผลการวิเคราะห์</span>
-            <RiskBadge level={result.risk_level} />
-          </div>
-
-          <div className="px-6 py-5 space-y-4">
-            {/* Score bar */}
+      {/* ส่วนแสดงผลลัพธ์ (Output) ให้เจ้าหน้าที่อ่านง่าย ตัดสินใจได้ทันที */}
+      {analysisResult && (
+        <div style={{
+          marginTop: '25px',
+          padding: '20px',
+          background: '#1e293b',
+          borderRadius: '8px',
+          border: '1px solid #475569'
+        }}>
+          <h3 style={{ margin: '0 0 12px 0', borderBottom: '1px solid #475569', paddingBottom: '8px' }}>
+            📊 ผลการวิเคราะห์ความเสี่ยง
+          </h3>
+          <div style={{ display: 'grid', gap: '8px', fontSize: '15px' }}>
             <div>
-              <div className="flex justify-between text-xs text-gray-400 mb-1">
-                <span>Risk Score</span>
-                <span>{(result.risk_score * 100).toFixed(1)}%</span>
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    result.risk_score >= 0.75 ? "bg-red-500" :
-                    result.risk_score >= 0.50 ? "bg-orange-500" :
-                    result.risk_score >= 0.25 ? "bg-yellow-500" : "bg-green-500"
-                  }`}
-                  style={{ width: `${result.risk_score * 100}%` }}
-                />
-              </div>
+              สถานะ: <strong style={{ color: getStatusColor(analysisResult.risk_level) }}>{analysisResult.status}</strong>
             </div>
-
-            {/* Explanation */}
-            <div className="p-3 bg-gray-900 rounded-lg text-sm text-gray-300">
-              {result.explanation}
+            <div>
+              ระดับความเสี่ยง (Risk Level): <strong>{analysisResult.risk_level}</strong>{' '}
+              <span style={{ color: '#94a3b8', fontSize: '13px' }}>(0 = ปลอดภัย, 1 = น่าสงสัย, 2 = หลอกลวงแน่นอน)</span>
             </div>
-
-            {/* Patterns */}
-            {result.detected_patterns.length > 0 && (
-              <div>
-                <p className="text-xs text-gray-400 mb-2">รูปแบบที่พบ</p>
-                <div className="flex flex-wrap gap-2">
-                  {result.detected_patterns.map(p => (
-                    <span key={p} className="px-2 py-1 bg-orange-900/50 text-orange-300 text-xs rounded border border-orange-800">
-                      {p}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Keywords */}
-            {result.suspicious_keywords.length > 0 && (
-              <div>
-                <p className="text-xs text-gray-400 mb-2">คำ/ลิงก์ที่น่าสงสัย</p>
-                <div className="flex flex-wrap gap-2">
-                  {result.suspicious_keywords.map((kw, i) => (
-                    <code key={i} className="px-2 py-0.5 bg-gray-900 text-red-300 text-xs rounded font-mono">
-                      {kw}
-                    </code>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div style={{ background: '#0f172a', padding: '12px', borderRadius: '6px', marginTop: '6px', fontSize: '14px', color: '#cbd5e1' }}>
+              <strong>คำอธิบายเพิ่มเติม:</strong> {analysisResult.description}
+            </div>
           </div>
         </div>
       )}

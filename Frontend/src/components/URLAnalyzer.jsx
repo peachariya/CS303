@@ -3,11 +3,15 @@ import { api } from "../services/api";
 import RiskBadge from "./RiskBadge";
 
 const SAMPLE_URLS = [
-  "http://kbank-secure-verify.xyz/login?ref=12345",
+  // LOW (score 0.05) - อยู่ใน LEGIT_THAI_DOMAINS
   "https://www.kasikornbank.com",
+  // MEDIUM (score 0.35) - TLD น่าสงสัย (.win) + ไม่ใช้ https
+  "http://freegift.win/promo",
+  // HIGH (score 0.65) - ใช้ IP address แทนโดเมน + path มีคำว่า login/confirm
   "http://192.168.1.1/rd-reward/confirm",
+  // CRITICAL (score 0.9) - TLD น่าสงสัย (.xyz) + มีคำธนาคารไทยแต่ไม่ใช่โดเมนจริง + path มีคำว่า login
+  "http://kbank-secure-verify.xyz/login?ref=12345",
 ];
-
 export default function URLAnalyzer() {
   const [url, setUrl] = useState("");
   const [result, setResult] = useState(null);
